@@ -29,6 +29,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # TEMPORARY: remove once the path issue is resolved
+      - name: Debug repo structure
+        working-directory: .
+        run: |
+          pwd
+          ls -la
+          find . -maxdepth 3 -type d -not -path './.git*'
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -61,6 +69,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # TEMPORARY: remove once the path issue is resolved
+      - name: Debug repo structure
+        working-directory: .
+        run: |
+          pwd
+          ls -la
+          find . -maxdepth 3 -type d -not -path './.git*'
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3

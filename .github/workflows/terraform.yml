@@ -1,0 +1,77 @@
+name: Terraform
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ARM_USE_OIDC: true
+
+jobs:
+  deploy-prod:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: prod
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_admin_password: ${{ secrets.TF_VAR_ADMIN_PASSWORD }}
+    defaults:
+      run:
+        working-directory: envs/prod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - run: |
+          terraform init \
+            -backend-config="resource_group_name=rg-tfstate-prod" \
+            -backend-config="storage_account_name=sttfstateprod<unique>" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=prod.tfstate" \
+            -backend-config="use_oidc=true" \
+            -backend-config="use_azuread_auth=true"
+      - run: terraform plan -out=tfplan -input=false
+      - run: terraform apply -input=false tfplan
+
+  deploy-nonprod:
+    needs: deploy-prod
+    runs-on: ubuntu-latest
+    environment: nonprod
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_admin_password: ${{ secrets.TF_VAR_ADMIN_PASSWORD }}
+    defaults:
+      run:
+        working-directory: envs/nonprod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - run: |
+          terraform init \
+            -backend-config="resource_group_name=rg-tfstate-nonprod" \
+            -backend-config="storage_account_name=sttfstatenonprod<unique>" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=nonprod.tfstate" \
+            -backend-config="use_oidc=true" \
+            -backend-config="use_azuread_auth=true"
+      - run: terraform plan -out=tfplan -input=false
+      - run: terraform apply -input=false tfplan

@@ -21,27 +21,16 @@ jobs:
     name: Validate production Terraform
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: envs/prod
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # TEMPORARY: remove once the path issue is resolved
-      - name: Debug repo structure
-        working-directory: .
-        run: |
-          pwd
-          ls -la
-          find . -maxdepth 3 -type d -not -path './.git*'
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform format
-        run: terraform fmt -check -recursive ../..
+        run: terraform fmt -check -recursive
 
       - name: Terraform init (backend disabled)
         run: terraform init -backend=false -input=false
@@ -62,21 +51,10 @@ jobs:
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       TF_VAR_admin_password: ${{ secrets.TF_VAR_ADMIN_PASSWORD }}
-    defaults:
-      run:
-        working-directory: envs/prod
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      # TEMPORARY: remove once the path issue is resolved
-      - name: Debug repo structure
-        working-directory: .
-        run: |
-          pwd
-          ls -la
-          find . -maxdepth 3 -type d -not -path './.git*'
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -108,7 +86,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: prod-tfplan
-          path: envs/prod/tfplan
+          path: tfplan
           retention-days: 1
           if-no-files-found: error
 
@@ -125,9 +103,6 @@ jobs:
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       TF_VAR_admin_password: ${{ secrets.TF_VAR_ADMIN_PASSWORD }}
-    defaults:
-      run:
-        working-directory: envs/prod
 
     steps:
       - name: Checkout
@@ -157,7 +132,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: prod-tfplan
-          path: envs/prod
+          path: .
 
       - name: Apply production
         run: terraform apply -input=false tfplan

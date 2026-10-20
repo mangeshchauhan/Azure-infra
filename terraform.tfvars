@@ -1,0 +1,10 @@
+subscription_id     = "bc9536ec-7ac3-4d8e-816c-3a90bb01c0b9"
+location            = "eastus"
+resource_group_name = "network-vm-prod"
+admin_username      = "azureuser"
+ssh_allowed_cidr    = "203.0.113.10/32"
+vm_size             = "Standard_B2s"
+availability_zone   = "1"
+vnet_address_space  = ["10.0.0.0/16"]
+subnet1_prefix      = "10.0.1.0/24"
+subnet2_prefix      = "10.0.2.0/24"

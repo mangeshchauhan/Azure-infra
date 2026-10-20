@@ -1,5 +1,4 @@
-
-name: Terraform
+name: Terraform Production
 
 on:
   pull_request:
@@ -19,20 +18,12 @@ env:
 
 jobs:
   validate:
-    name: Validate Terraform
+    name: Validate production Terraform
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
-    strategy:
-      fail-fast: false
-      matrix:
-        environment: [nonprod, prod]
-
     defaults:
       run:
-        working-directory: envs/${{ matrix.environment }}
+        working-directory: envs/prod
 
     steps:
       - name: Checkout
@@ -50,133 +41,19 @@ jobs:
       - name: Terraform validate
         run: terraform validate
 
-  plan-nonprod:
-    name: Plan non-production
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    environment: nonprod
-
-    permissions:
-      contents: read
-      id-token: write
-
-    env:
-      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      TF_VAR_admin_password: ${{ secrets.TF_VAR_ADMIN_PASSWORD }}
-
-    defaults:
-      run:
-        working-directory: envs/nonprod
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Azure login with OIDC
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Terraform init
-        run: |
-          terraform init -input=false \
-            -backend-config="resource_group_name=rg-tfstate-nonprod" \
-            -backend-config="storage_account_name=${{ vars.AZURE_TFSTATE_STORAGE_ACCOUNT }}" \
-            -backend-config="container_name=tfstate" \
-            -backend-config="key=nonprod.tfstate" \
-            -backend-config="use_oidc=true" \
-            -backend-config="use_azuread_auth=true"
-
-      - name: Terraform validate
-        run: terraform validate
-
-      - name: Terraform plan
-        run: terraform plan -input=false -out=tfplan
-
-      - name: Save non-production plan
-        uses: actions/upload-artifact@v4
-        with:
-          name: nonprod-tfplan
-          path: envs/nonprod/tfplan
-          retention-days: 1
-          if-no-files-found: error
-
-  apply-nonprod:
-    name: Apply non-production
-    needs: plan-nonprod
-    runs-on: ubuntu-latest
-    environment: nonprod
-
-    permissions:
-      contents: read
-      id-token: write
-
-    env:
-      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      TF_VAR_admin_password: ${{ secrets.TF_VAR_ADMIN_PASSWORD }}
-
-    defaults:
-      run:
-        working-directory: envs/nonprod
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Azure login with OIDC
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Terraform init
-        run: |
-          terraform init -input=false \
-            -backend-config="resource_group_name=rg-tfstate-nonprod" \
-            -backend-config="storage_account_name=${{ vars.AZURE_TFSTATE_STORAGE_ACCOUNT }}" \
-            -backend-config="container_name=tfstate" \
-            -backend-config="key=nonprod.tfstate" \
-            -backend-config="use_oidc=true" \
-            -backend-config="use_azuread_auth=true"
-
-      - name: Download non-production plan
-        uses: actions/download-artifact@v4
-        with:
-          name: nonprod-tfplan
-          path: envs/nonprod
-
-      - name: Apply non-production
-        run: terraform apply -input=false tfplan
-
   plan-prod:
     name: Plan production
-    needs: apply-nonprod
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: prod
-
     permissions:
       contents: read
       id-token: write
-
     env:
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       TF_VAR_admin_password: ${{ secrets.TF_VAR_ADMIN_PASSWORD }}
-
     defaults:
       run:
         working-directory: envs/prod
@@ -224,17 +101,14 @@ jobs:
     needs: plan-prod
     runs-on: ubuntu-latest
     environment: prod
-
     permissions:
       contents: read
       id-token: write
-
     env:
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       TF_VAR_admin_password: ${{ secrets.TF_VAR_ADMIN_PASSWORD }}
-
     defaults:
       run:
         working-directory: envs/prod

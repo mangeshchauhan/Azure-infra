@@ -90,9 +90,21 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
+  approve-prod:
+    name: Approve production deployment
+    needs: plan-prod
+    runs-on: ubuntu-latest
+    environment: prod-approval
+    permissions:
+      contents: read
+
+    steps:
+      - name: Confirm approval
+        run: echo "Production deployment approved."
+
   apply-prod:
     name: Apply production (approval required)
-    needs: plan-prod
+    needs: approve-prod
     runs-on: ubuntu-latest
     environment: prod
     permissions:

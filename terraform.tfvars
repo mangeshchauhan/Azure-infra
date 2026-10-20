@@ -1,5 +1,5 @@
 subscription_id     = "bc9536ec-7ac3-4d8e-816c-3a90bb01c0b9"
-location            = "eastus"
+location            = "Central US"
 resource_group_name = "network-vm-prod"
 admin_username      = "azureuser"
 ssh_allowed_cidr    = "203.0.113.10/32"
